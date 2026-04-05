@@ -1,0 +1,1316 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Clinical NLP Extractor</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:ital,wght@0,300;0,400;0,500;0,600;1,300&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap');
+
+        :root {
+            --bg: #f7f6f2;
+            --surface: #ffffff;
+            --surface2: #f0efe9;
+            --border: #dddbd3;
+            --ink: #1a1916;
+            --muted: #7a7870;
+            --accent: #1a5c3a;
+            --accent2: #c84b2f;
+            --accent3: #2563b0;
+            --tag-bg: #e8f4ee;
+            --tag-ink: #1a5c3a;
+            --yellow: #fef3c7;
+            --yellow-b: #92400e;
+            --mono: 'IBM Plex Mono', monospace;
+            --sans: 'IBM Plex Sans', sans-serif;
+            --r: 6px;
+        }
+
+        *,
+        *::before,
+        *::after {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--bg);
+            color: var(--ink);
+            min-height: 100vh;
+            display: grid;
+            grid-template-rows: auto 1fr auto;
+        }
+
+        /* ── HEADER ─────────────────────────────────────────────────── */
+        header {
+            padding: 20px 40px;
+            border-bottom: 2px solid var(--ink);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--ink);
+            color: #fff;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .header-logo {
+            width: 44px;
+            height: 44px;
+            border: 2px solid #fff;
+            display: grid;
+            place-items: center;
+            font-family: var(--mono);
+            font-weight: 600;
+            font-size: 13px;
+            letter-spacing: -0.5px;
+            flex-shrink: 0;
+        }
+
+        .header-title h1 {
+            font-family: var(--mono);
+            font-weight: 600;
+            font-size: 15px;
+            letter-spacing: -0.3px;
+        }
+
+        .header-title p {
+            font-size: 12px;
+            opacity: .55;
+            margin-top: 2px;
+        }
+
+        .header-badge {
+            font-family: var(--mono);
+            font-size: 11px;
+            border: 1px solid rgba(255, 255, 255, .3);
+            padding: 5px 12px;
+            border-radius: 3px;
+            opacity: .7;
+        }
+
+        /* ── MAIN LAYOUT ─────────────────────────────────────────────── */
+        main {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            height: calc(100vh - 73px);
+            overflow: hidden;
+        }
+
+        /* ── LEFT PANEL ──────────────────────────────────────────────── */
+        .left-panel {
+            border-right: 2px solid var(--ink);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .panel-header {
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface2);
+            flex-shrink: 0;
+        }
+
+        .panel-header h2 {
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .tab-group {
+            display: flex;
+            gap: 2px;
+        }
+
+        .tab {
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 5px 12px;
+            border: 1px solid var(--border);
+            background: none;
+            cursor: pointer;
+            border-radius: 3px;
+            color: var(--muted);
+            transition: all .15s;
+        }
+
+        .tab.active,
+        .tab:hover {
+            background: var(--ink);
+            color: #fff;
+            border-color: var(--ink);
+        }
+
+        /* textarea */
+        .text-area-wrap {
+            flex: 1;
+            overflow: hidden;
+            position: relative;
+        }
+
+        #report-input {
+            width: 100%;
+            height: 100%;
+            font-family: var(--mono);
+            font-size: 13px;
+            line-height: 1.65;
+            padding: 24px;
+            border: none;
+            outline: none;
+            resize: none;
+            background: var(--surface);
+            color: var(--ink);
+        }
+
+        #report-input::placeholder {
+            color: var(--border);
+            font-style: italic;
+        }
+
+        /* Sample selector */
+        .sample-bar {
+            padding: 10px 24px;
+            border-top: 1px solid var(--border);
+            background: var(--surface2);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-shrink: 0;
+            flex-wrap: wrap;
+        }
+
+        .sample-label {
+            font-size: 11px;
+            color: var(--muted);
+            font-family: var(--mono);
+        }
+
+        .sample-btn {
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 4px 10px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 3px;
+            cursor: pointer;
+            color: var(--ink);
+            transition: all .15s;
+        }
+
+        .sample-btn:hover {
+            background: var(--ink);
+            color: #fff;
+            border-color: var(--ink);
+        }
+
+        /* Action bar */
+        .action-bar {
+            padding: 16px 24px;
+            border-top: 2px solid var(--ink);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            background: var(--surface);
+            flex-shrink: 0;
+        }
+
+        .report-id-wrap {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex: 1;
+        }
+
+        .report-id-wrap label {
+            font-size: 11px;
+            color: var(--muted);
+            font-family: var(--mono);
+            white-space: nowrap;
+        }
+
+        .report-id-wrap input {
+            width: 120px;
+            padding: 7px 10px;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--ink);
+            background: var(--surface2);
+            outline: none;
+        }
+
+        .report-id-wrap input:focus {
+            border-color: var(--accent);
+        }
+
+        .btn-extract {
+            padding: 10px 28px;
+            background: var(--accent);
+            color: #fff;
+            border: none;
+            border-radius: var(--r);
+            font-family: var(--mono);
+            font-size: 13px;
+            font-weight: 500;
+            cursor: pointer;
+            letter-spacing: 0.3px;
+            transition: opacity .15s, transform .1s;
+        }
+
+        .btn-extract:hover {
+            opacity: .85;
+        }
+
+        .btn-extract:active {
+            transform: scale(.97);
+        }
+
+        .btn-extract:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+        .btn-clear {
+            padding: 10px 16px;
+            background: none;
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            font-family: var(--mono);
+            font-size: 12px;
+            cursor: pointer;
+            color: var(--muted);
+            transition: all .15s;
+        }
+
+        .btn-clear:hover {
+            border-color: var(--ink);
+            color: var(--ink);
+        }
+
+        /* ── RIGHT PANEL ─────────────────────────────────────────────── */
+        .right-panel {
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            background: var(--surface);
+        }
+
+        .output-header {
+            padding: 14px 24px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: var(--surface2);
+            flex-shrink: 0;
+        }
+
+        .output-header h2 {
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 500;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            color: var(--muted);
+        }
+
+        .output-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn-sm {
+            font-family: var(--mono);
+            font-size: 11px;
+            padding: 5px 12px;
+            border: 1px solid var(--border);
+            background: var(--surface);
+            border-radius: 3px;
+            cursor: pointer;
+            color: var(--muted);
+            transition: all .15s;
+        }
+
+        .btn-sm:hover {
+            background: var(--ink);
+            color: #fff;
+            border-color: var(--ink);
+        }
+
+        /* View toggle */
+        .view-toggle {
+            display: flex;
+            gap: 2px;
+        }
+
+        /* Output scroll area */
+        #output-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 24px;
+        }
+
+        /* ── EMPTY STATE ─────────────────────────────────────────────── */
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 14px;
+            text-align: center;
+            color: var(--muted);
+            animation: fadein .4s ease;
+        }
+
+        .empty-icon {
+            width: 60px;
+            height: 60px;
+            border: 2px dashed var(--border);
+            display: grid;
+            place-items: center;
+            font-size: 26px;
+            color: var(--border);
+        }
+
+        .empty-state h3 {
+            font-family: var(--mono);
+            font-size: 14px;
+            color: var(--muted);
+        }
+
+        .empty-state p {
+            font-size: 13px;
+            max-width: 280px;
+            line-height: 1.6;
+        }
+
+        /* ── CARD VIEW ───────────────────────────────────────────────── */
+        .result-cards {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            animation: fadein .3s ease;
+        }
+
+        .card {
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            overflow: hidden;
+        }
+
+        .card-header {
+            padding: 10px 16px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .card-title {
+            font-family: var(--mono);
+            font-size: 12px;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+        .card-count {
+            font-family: var(--mono);
+            font-size: 11px;
+            background: var(--ink);
+            color: #fff;
+            padding: 2px 7px;
+            border-radius: 99px;
+        }
+
+        .card-body {
+            padding: 14px 16px;
+        }
+
+        .tag-cloud {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .tag {
+            font-family: var(--mono);
+            font-size: 11.5px;
+            padding: 4px 10px;
+            border-radius: 4px;
+            border: 1px solid;
+            animation: pop .2s ease both;
+        }
+
+        .tag-clinical {
+            background: #eef2ff;
+            border-color: #c7d2fe;
+            color: #3730a3;
+        }
+
+        .tag-anatomy {
+            background: #f0fdf4;
+            border-color: #bbf7d0;
+            color: #166534;
+        }
+
+        .tag-diagnosis {
+            background: #fff7ed;
+            border-color: #fed7aa;
+            color: #9a3412;
+        }
+
+        .tag-procedure {
+            background: #f0f9ff;
+            border-color: #bae6fd;
+            color: #075985;
+        }
+
+        .tag-icd {
+            background: #fdf4ff;
+            border-color: #e9d5ff;
+            color: #6b21a8;
+        }
+
+        .tag-cpt {
+            background: #fefce8;
+            border-color: #fef08a;
+            color: #713f12;
+        }
+
+        .tag-hcpcs {
+            background: #fff1f2;
+            border-color: #fecdd3;
+            color: #9f1239;
+        }
+
+        .tag-modifier {
+            background: #f8fafc;
+            border-color: #e2e8f0;
+            color: #475569;
+        }
+
+        .empty-list {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--border);
+            font-style: italic;
+        }
+
+        /* ── JSON VIEW ───────────────────────────────────────────────── */
+        .json-view {
+            font-family: var(--mono);
+            font-size: 12.5px;
+            line-height: 1.7;
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 20px;
+            white-space: pre-wrap;
+            word-break: break-all;
+            animation: fadein .3s ease;
+        }
+
+        .json-key {
+            color: var(--accent3);
+        }
+
+        .json-str {
+            color: var(--accent);
+        }
+
+        .json-num {
+            color: var(--accent2);
+        }
+
+        .json-bool {
+            color: #9333ea;
+        }
+
+        .json-null {
+            color: var(--muted);
+        }
+
+        .json-bracket {
+            color: var(--ink);
+        }
+
+        /* ── PROCESSING INDICATOR ────────────────────────────────────── */
+        .processing {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            height: 100%;
+            gap: 16px;
+        }
+
+        .spinner {
+            width: 36px;
+            height: 36px;
+            border: 3px solid var(--border);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin .7s linear infinite;
+        }
+
+        .processing p {
+            font-family: var(--mono);
+            font-size: 12px;
+            color: var(--muted);
+        }
+
+        /* ── STATS BAR ───────────────────────────────────────────────── */
+        .stats-strip {
+            padding: 10px 24px;
+            border-top: 1px solid var(--border);
+            background: var(--surface2);
+            display: flex;
+            gap: 24px;
+            flex-shrink: 0;
+        }
+
+        .stat-item {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: var(--muted);
+            font-family: var(--mono);
+        }
+
+        .stat-val {
+            font-family: var(--mono);
+            font-size: 13px;
+            font-weight: 600;
+        }
+
+        /* ── FOOTER ──────────────────────────────────────────────────── */
+        footer {
+            grid-column: 1/-1;
+            padding: 10px 40px;
+            border-top: 1px solid var(--border);
+            background: var(--surface2);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        footer p {
+            font-size: 11px;
+            color: var(--muted);
+            font-family: var(--mono);
+        }
+
+        /* ── ANIMATIONS ──────────────────────────────────────────────── */
+        @keyframes fadein {
+            from {
+                opacity: 0;
+                transform: translateY(6px);
+            }
+
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes pop {
+            from {
+                opacity: 0;
+                transform: scale(.85);
+            }
+
+            to {
+                opacity: 1;
+                scale: 1;
+            }
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+
+        /* ── SCROLLBAR ───────────────────────────────────────────────── */
+        ::-webkit-scrollbar {
+            width: 5px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: transparent;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 99px;
+        }
+
+        /* ── RESPONSIVE ──────────────────────────────────────────────── */
+        @media (max-width: 900px) {
+            main {
+                grid-template-columns: 1fr;
+                grid-template-rows: 1fr 1fr;
+                height: auto;
+            }
+
+            .left-panel,
+            .right-panel {
+                height: 50vh;
+            }
+
+            header {
+                padding: 14px 20px;
+            }
+
+            .header-badge {
+                display: none;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header>
+        <div class="header-left">
+            <div class="header-logo">NLP</div>
+            <div class="header-title">
+                <h1>Clinical Report Extractor</h1>
+                <p>Traditional NLP · Rule-based · No LLMs</p>
+            </div>
+        </div>
+        <span class="header-badge">ICD-10 · CPT · HCPCS · NER</span>
+    </header>
+
+    <!-- MAIN -->
+    <main>
+
+        <!-- LEFT — INPUT PANEL -->
+        <div class="left-panel">
+            <div class="panel-header">
+                <h2>Input Report</h2>
+                <div class="tab-group">
+                    <button class="tab active" onclick="setInputMode('text')">Plain Text</button>
+                </div>
+            </div>
+
+            <div class="text-area-wrap">
+                <textarea id="report-input" placeholder="Paste a clinical endoscopy report here…
+
+Example:
+Diagnosis:
+Z86.0100 - Personal history of colonic polyps
+K64.8 - Internal hemorrhoids
+
+Procedure: Colonoscopy
+The colonoscope was inserted into the rectum and advanced to the cecum…
+
+Impression:
+- Internal hemorrhoids
+- Diverticulosis (sigmoid)"></textarea>
+            </div>
+
+            <div class="sample-bar">
+                <span class="sample-label">Load sample:</span>
+                <button class="sample-btn" onclick="loadSample(1)">Report 1</button>
+                <button class="sample-btn" onclick="loadSample(2)">Report 2</button>
+                <button class="sample-btn" onclick="loadSample(3)">Report 3</button>
+                <button class="sample-btn" onclick="loadSample(4)">Report 4</button>
+            </div>
+
+            <div class="action-bar">
+                <div class="report-id-wrap">
+                    <label>Report ID:</label>
+                    <input type="text" id="report-id" value="Report 1" />
+                </div>
+                <button class="btn-clear" onclick="clearAll()">Clear</button>
+                <button class="btn-extract" id="extract-btn" onclick="runExtraction()">
+                    Extract →
+                </button>
+            </div>
+        </div>
+
+        <!-- RIGHT — OUTPUT PANEL -->
+        <div class="right-panel">
+            <div class="output-header">
+                <h2>Extracted Output</h2>
+                <div class="output-actions">
+                    <div class="view-toggle">
+                        <button class="btn-sm active" id="btn-cards" onclick="setView('cards')">Cards</button>
+                        <button class="btn-sm" id="btn-json" onclick="setView('json')">JSON</button>
+                    </div>
+                    <button class="btn-sm" id="copy-btn" onclick="copyJSON()" style="display:none">Copy JSON</button>
+                    <button class="btn-sm" id="dl-btn" onclick="downloadJSON()" style="display:none">Download</button>
+                </div>
+            </div>
+
+            <div id="output-area">
+                <div class="empty-state">
+                    <div class="empty-icon">⚕</div>
+                    <h3>No output yet</h3>
+                    <p>Paste a clinical report on the left and click <strong>Extract →</strong> to begin.</p>
+                </div>
+            </div>
+
+            <div class="stats-strip" id="stats-strip" style="display:none">
+                <div class="stat-item">
+                    <span class="stat-label">clinical terms</span>
+                    <span class="stat-val" id="st-terms">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">locations</span>
+                    <span class="stat-val" id="st-locs">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">diagnoses</span>
+                    <span class="stat-val" id="st-diag">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">ICD-10</span>
+                    <span class="stat-val" id="st-icd">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">CPT</span>
+                    <span class="stat-val" id="st-cpt">0</span>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <footer>
+        <p>Clinical NLP Extractor · Rule-based NER · No LLMs used</p>
+        <p>ICD-10 · CPT · HCPCS · Entity Recognition</p>
+    </footer>
+
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <!-- EMBEDDED NLP ENGINE (JavaScript port of extractor.py)     -->
+    <!-- ══════════════════════════════════════════════════════════ -->
+    <script>
+        'use strict';
+
+        // ── Lexicons ──────────────────────────────────────────────────────────────────
+
+        const CLINICAL_TERMS = [
+            "diverticulosis", "diverticulitis", "sigmoid diverticulosis", "moderate sigmoid diverticulosis",
+            "internal hemorrhoids", "external hemorrhoids", "hemorrhoids", "hemorrhage",
+            "rectal bleeding", "rectal hemorrhage",
+            "melanosis coli", "colon polyps", "colonic polyps", "sessile polyp", "polyp",
+            "proctitis", "localized erosion", "erosion",
+            "ulcer of anus and rectum", "ulcer", "gastritis", "antral gastritis", "body gastritis",
+            "mild antral and body gastritis", "barrett's esophagus", "barrett esophagus",
+            "colon cancer screening", "cancer screening",
+            "polyp removal", "biopsy", "biopsy taken", "biopsies",
+            "h.pylori", "helicobacter pylori", "h. pylori",
+            "irregular z-line", "z-line", "narrow band imaging",
+            "no polyps found", "no immediate complications", "no immediate complication",
+            "good bowel preparation", "good bowel prep", "bowel prep",
+            "minimal estimated blood loss", "estimated blood loss",
+            "no ulcers or masses", "no ulcers", "no masses",
+            "polyp completely removed",
+            "atypical chest pain", "chest pain",
+            "right upper quadrant abdominal pain", "right upper quadrant pain", "ruq pain",
+            "abdominal pain",
+            "rectal exam", "cold forceps", "cold snare", "retroflexion",
+            "boston bowel preparation scale", "bbps",
+            "monitored anesthesia care", "mac",
+            "intravenous medication administration",
+        ];
+
+        const ANATOMICAL_LOCATIONS = [
+            "rectum", "distal rectum", "anal canal", "anal verge", "anus",
+            "sigmoid colon", "descending colon", "transverse colon",
+            "ascending colon", "proximal colon", "cecum",
+            "ileocecal valve", "appendiceal orifice", "terminal ileum",
+            "splenic flexure", "hepatic flexure",
+            "esophagus", "distal esophagus",
+            "stomach", "antrum", "stomach body",
+            "duodenum", "duodenal bulb", "2nd portion of duodenum",
+            "right upper quadrant", "ruq",
+            "colon", "large intestine", "small intestine", "ileum",
+        ];
+
+        const PROCEDURES_LEX = [
+            "colonoscopy", "flexible colonoscopy",
+            "egd", "esophagogastroduodenoscopy", "egd with biopsy", "egd w/biopsy",
+            "upper endoscopy",
+            "rectal examination", "rectal exam",
+            "scope passage to cecum",
+            "retroflexion in rectum", "retroflexion in the rectum",
+            "retroflexion in stomach", "retroflexion in the stomach",
+            "monitored anesthesia care", "mac anesthesia",
+            "cold forceps biopsy", "biopsy using cold forceps",
+            "cold snare polypectomy", "polypectomy", "snare polypectomy",
+            "boston bowel preparation scoring",
+            "intravenous medication administration",
+            "narrow band imaging",
+        ];
+
+        // ── Code patterns ─────────────────────────────────────────────────────────────
+
+        const ICD10_RE = /\b([A-Z]\d{2}(?:\.\d{1,4})?)\b/g;
+        const CPT_RE = /\b(4[0-9]{4}|9[0-9]{4}|0[0-9]{4})\b/g;
+        const HCPCS_RE = /\b([A-HJKMNPQRSTV]\d{4})\b/g;
+        const MODIFIER_RE = /\b(25|26|50|51|52|53|59|76|77|78|79|80|81|82|AS|GC|QW|TC|LT|RT|GZ|KX)\b/g;
+
+        // ── Helpers ───────────────────────────────────────────────────────────────────
+
+        function norm(s) { return s.toLowerCase().replace(/\s+/g, ' ').trim(); }
+
+        function matchLexicon(text, lexicon) {
+            const n = norm(text);
+            const found = new Set();
+            for (const phrase of lexicon) {
+                if (n.includes(norm(phrase))) found.add(phrase);
+            }
+            return [...found].sort((a, b) => b.length - a.length);
+        }
+
+        function deduplicateSubstrings(items) {
+            const norms = items.map(norm);
+            return items.filter((item, i) =>
+                !norms.some((nj, j) => j !== i && norm(item) !== nj && norm(item).includes(nj) === false && nj.includes(norm(item)))
+            );
+        }
+
+        function titleCase(s) { return s.replace(/\b\w/g, c => c.toUpperCase()); }
+
+        function extractCodes(text, re) {
+            const found = new Set();
+            let m;
+            const r = new RegExp(re.source, re.flags.includes('g') ? re.flags : re.flags + 'g');
+            while ((m = r.exec(text)) !== null) found.add(m[1]);
+            return [...found].sort();
+        }
+
+        // ── Section splitter ──────────────────────────────────────────────────────────
+
+        function splitSections(text) {
+            const sections = { full: text };
+            const headerRe = /(?:^|\n)\s*(diagnosis|procedure(?:\s+codes?)?|impression|findings?|indication|plan|post[- ]?operative[^\n:]*|pre[- ]?operative[^\n:]*|complications?)\s*[:\n]/gi;
+            let lastKey = null, lastEnd = 0;
+            let m;
+            while ((m = headerRe.exec(text)) !== null) {
+                if (lastKey !== null) sections[norm(lastKey)] = text.slice(lastEnd, m.index);
+                lastKey = m[1]; lastEnd = m.index + m[0].length;
+            }
+            if (lastKey) sections[norm(lastKey)] = text.slice(lastEnd);
+            return sections;
+        }
+
+        // ── Entity extractors ─────────────────────────────────────────────────────────
+
+        function extractClinicalTerms(text) {
+            let raw = matchLexicon(text, CLINICAL_TERMS);
+
+            // Observation patterns
+            const obsPatterns = [
+                /no\s+(?:immediate\s+)?complications?/gi,
+                /good\s+(?:bowel\s+)?prep(?:aration)?/gi,
+                /no\s+polyps?\s+(?:found|seen|identified)/gi,
+                /no\s+ulcers?\s+or\s+masses?/gi,
+                /minimal\s+(?:estimated\s+)?blood\s+loss/gi,
+                /biops(?:y|ies)(?:\s+(?:taken|obtained|were taken|were obtained))?/gi,
+                /polyp\s+completely\s+removed\s+and\s+retrieved/gi,
+            ];
+            for (const pat of obsPatterns) {
+                let m; const rr = new RegExp(pat.source, pat.flags.includes('g') ? pat.flags : pat.flags + 'g');
+                while ((m = rr.exec(text)) !== null) raw.push(m[0].trim());
+            }
+
+            const cleaned = [...new Set(raw.map(t => t.trim()).filter(Boolean).map(t => titleCase(t)))];
+            return cleaned.sort();
+        }
+
+        function extractAnatomicalLocations(text) {
+            const raw = matchLexicon(text, ANATOMICAL_LOCATIONS);
+            const cleaned = [...new Set(raw.map(t => titleCase(t.trim())).filter(Boolean))];
+            return cleaned.sort();
+        }
+
+        function extractDiagnoses(text) {
+            const diagnoses = new Set();
+
+            // CODE - Description pairs
+            const codeLabelRe = /[A-Z]\d{2}(?:\.\d{1,4})?\s*[-–]\s*([^\n,;]{3,120})/g;
+            let m;
+            while ((m = codeLabelRe.exec(text)) !== null) {
+                diagnoses.add(m[1].trim().replace(/\.?\s*$/, ''));
+            }
+
+            // Impression block
+            const impMatch = text.match(/impression\s*[:\n]([\s\S]*?)(?=\n[A-Z]{2,}|procedure codes?|$)/i);
+            if (impMatch) {
+                impMatch[1].split(/\n|[.!?]+\s/).forEach(line => {
+                    const s = line.replace(/^[-•\s]+/, '').trim();
+                    if (s.length > 4 && s.length < 200) diagnoses.add(s);
+                });
+            }
+
+            // Diagnosis block lines (strip codes)
+            const diagMatch = text.match(/(?:pre.?operative\s+)?diagnosis\s*[:\n]([\s\S]*?)(?=procedure|impression|$)/i);
+            if (diagMatch) {
+                diagMatch[1].split('\n').forEach(line => {
+                    let s = line.replace(/[A-Z]\d{2}(?:\.\d{1,4})?/g, '').replace(/\[.*?\]/g, '').replace(/[-–\[\]·•\t]/g, ' ').trim();
+                    s = s.replace(/\s+/g, ' ').trim();
+                    if (s.length > 4 && s.length < 160) diagnoses.add(s);
+                });
+            }
+
+            return [...diagnoses].filter(d => d.trim()).sort((a, b) => a.length - b.length);
+        }
+
+        function extractProcedures(text) {
+            let raw = matchLexicon(text, PROCEDURES_LEX);
+
+            // Procedure block lines
+            const procMatch = text.match(/procedure(?:\s+codes?)?\s*[:\n]([\s\S]*?)(?=diagnosis|impression|$)/i);
+            if (procMatch) {
+                procMatch[1].split('\n').forEach(line => {
+                    let s = line.replace(/\d{5}/g, '').replace(/[A-Z]\d{2}(?:\.\d{1,4})?/g, '').replace(/[-:,;.]+$/, '').trim();
+                    if (s.length > 3 && s.length < 120 && !/^\d+$/.test(s)) raw.push(s);
+                });
+            }
+
+            const cleaned = [...new Set(raw.map(s => s.trim()).filter(Boolean))];
+            return cleaned.sort();
+        }
+
+        function extractICD10(text) {
+            const codes = extractCodes(text, ICD10_RE);
+            return codes.filter(c => /^[A-Z]\d/.test(c));
+        }
+
+        function extractCPT(text) {
+            const codes = extractCodes(text, CPT_RE);
+            return codes.filter(c => { const n = parseInt(c); return n >= 100 && n <= 99607; });
+        }
+
+        function extractHCPCS(text) {
+            const codes = extractCodes(text, HCPCS_RE);
+            return codes.filter(c => /^[A-HJKMNPQRSTV]\d{4}$/.test(c));
+        }
+
+        function extractModifiers(text) {
+            return extractCodes(text, MODIFIER_RE);
+        }
+
+        // ── Master pipeline ───────────────────────────────────────────────────────────
+
+        function extractReport(text, reportId) {
+            return {
+                "ReportID": reportId || "Report",
+                "Clinical Terms": extractClinicalTerms(text),
+                "Anatomical Locations": extractAnatomicalLocations(text),
+                "Diagnosis": extractDiagnoses(text),
+                "Procedures": extractProcedures(text),
+                "ICD-10": extractICD10(text),
+                "CPT": extractCPT(text),
+                "HCPCS": extractHCPCS(text),
+                "Modifiers": extractModifiers(text),
+            };
+        }
+
+        // ═════════════════════════════════════════════════════════════════════════════
+        // SAMPLE REPORTS
+        // ═════════════════════════════════════════════════════════════════════════════
+
+        const SAMPLES = {
+            1: `Diagnosis:
+Z86.0100 - Personal history of colonic polyps
+K64.8 - Internal hemorrhoids
+K57.90 - Diverticulosis
+
+Procedure: Colonoscopy
+Anesthesia Type: Monitored Anesthesia Care ASA Class: II
+Lactated Ringers - Solution, Intravenous as directed
+Lidocaine HCI 2% Solution, IV - 20 00
+Propofol 500 MG/50ML Emulsion, Intravenous - 240 00
+
+The pediatric colonoscope was inserted into the rectum and carefully advanced to the cecum. The cecum was identified by the ileocecal valve, the triradiate fold and appendiceal orifice. Careful inspection was made as the colonoscope was removed including retroflexion in the rectum.
+Findings: The preparation was good. There was melanosis coli in the proximal colon. There was moderate sigmoid diverticulosis. Internal hemorrhoids were seen.
+
+Impression:
+- Personal history of colonic polyps
+- Internal hemorrhoids
+- Diverticulosis (sigmoid)
+- Melanosis coli
+- No new polyps seen in this examination
+
+Procedure Codes: 45378`,
+
+            2: `Diagnosis:
+Pre-operative Diagnosis: Z12.11 - Colon cancer screening
+
+Procedure: Colonoscopy
+- Anal Canal: K64.9 - Hemorrhoids, unspecified
+- Rectum: Normal
+- Sigmoid Colon: Normal
+- Descending Colon: Normal
+- Splenic Flexure: Normal
+- Transverse Colon: Normal
+- Hepatic Flexure: Normal
+- Ascending Colon: Normal
+- Cecum: Normal
+- Terminal Ileum: Normal
+- Polyps:
+  - Site: Descending Colon
+  - Size: 6 mm
+  - Type: Sessile Polyp
+  - Device/Method: Cold Snare
+  - Polyp completely removed and retrieved
+
+Complications: No Immediate Complication.
+
+Procedure Codes: 45385`,
+
+            3: `Diagnosis:
+Indication: Last colonoscopy 3 years ago, Rectal bleeding
+K62.6 - Ulcer of anus and rectum
+K64.8 - Other hemorrhoids
+K62.5 - Hemorrhage of anus and rectum
+
+Procedure: Colonoscopy
+The Colonoscope was introduced through the anus and advanced to the cecum, identified by appendiceal orifice and ileocecal valve. Retroflexion done in the rectum. The quality of the bowel preparation was evaluated using the BBPS (Boston Bowel Preparation Scale) with total BBPS score equals 9.
+Right Colon = 3, Transverse Colon = 3, Left Colon = 3.
+
+Findings:
+- A single localized erosion (proctitis) was found in the distal rectum at the anal verge. Biopsies were taken with a cold forceps for histology. Estimated blood loss was minimal.
+- Internal hemorrhoids were found during retroflexion. The hemorrhoids were moderate.
+
+Impression:
+- A single erosion in the distal rectum. Biopsied.
+- Internal hemorrhoids.
+- The examination was otherwise normal on direct and retroflexion views.
+
+Procedure Codes: 45380, Colonoscopy, flexible; with biopsy, single or multiple`,
+
+            4: `Pre-operative Diagnosis:
+R07.89 - Atypical chest pain
+R10.11 - Right upper quadrant abdominal pain
+
+Post-operative Diagnosis:
+R07.89 - Atypical chest pain
+R10.11 - RUQ pain
+K29.70 - Gastritis
+
+Procedure Code: EGD w/Biopsy
+Anesthesia Type: Monitored Anesthesia Care
+Lactated Ringers - Solution, Intravenous as directed
+Lidocaine HCI 2% Solution, IV - 60 00
+Propofol 500 MG/50ML Emulsion, Intravenous - 350 00
+
+EGD Procedure: The Olympus endoscope was inserted into the esophagus under direct visualization. It was advanced through the esophagus, into the stomach and through the pylorus to the duodenal bulb and 2nd portion of the duodenum. Retroflexion in the stomach was performed.
+Findings: In the distal esophagus there was an irregular Z-line from 38-39 cm suggestive of Barrett's esophagus. This was examined both white light and narrow band imaging. Biopsies were obtained of the distal esophagus. In the stomach there was mild antral and body gastritis. Biopsies were obtained for H.pylori. There were no ulcers or masses seen. The visualized portion of the duodenal appeared normal.
+
+Impression:
+- Atypical chest pain
+- Right upper quadrant pain
+- Mild gastritis
+- Suspected Barrett's esophagus (biopsied)
+
+Procedure Codes: 43239`
+        };
+
+        // ═════════════════════════════════════════════════════════════════════════════
+        // UI STATE & RENDERING
+        // ═════════════════════════════════════════════════════════════════════════════
+
+        let currentResult = null;
+        let currentView = 'cards';
+
+        function loadSample(n) {
+            document.getElementById('report-input').value = SAMPLES[n];
+            document.getElementById('report-id').value = `Report ${n}`;
+        }
+
+        function clearAll() {
+            document.getElementById('report-input').value = '';
+            document.getElementById('report-id').value = 'Report 1';
+            currentResult = null;
+            showEmpty();
+            document.getElementById('stats-strip').style.display = 'none';
+            document.getElementById('copy-btn').style.display = 'none';
+            document.getElementById('dl-btn').style.display = 'none';
+        }
+
+        function setView(v) {
+            currentView = v;
+            document.getElementById('btn-cards').classList.toggle('active', v === 'cards');
+            document.getElementById('btn-json').classList.toggle('active', v === 'json');
+            if (currentResult) renderResult(currentResult);
+        }
+
+        function showEmpty() {
+            document.getElementById('output-area').innerHTML = `
+    <div class="empty-state">
+      <div class="empty-icon">⚕</div>
+      <h3>No output yet</h3>
+      <p>Paste a clinical report on the left and click <strong>Extract →</strong> to begin.</p>
+    </div>`;
+        }
+
+        function showProcessing() {
+            document.getElementById('output-area').innerHTML = `
+    <div class="processing">
+      <div class="spinner"></div>
+      <p>Extracting clinical entities…</p>
+    </div>`;
+        }
+
+        // ── Card renderer ─────────────────────────────────────────────────────────────
+
+        const FIELD_CONFIG = [
+            { key: 'Clinical Terms', cls: 'tag-clinical', label: 'Clinical Terms' },
+            { key: 'Anatomical Locations', cls: 'tag-anatomy', label: 'Anatomical Locations' },
+            { key: 'Diagnosis', cls: 'tag-diagnosis', label: 'Diagnosis' },
+            { key: 'Procedures', cls: 'tag-procedure', label: 'Procedures' },
+            { key: 'ICD-10', cls: 'tag-icd', label: 'ICD-10 Codes' },
+            { key: 'CPT', cls: 'tag-cpt', label: 'CPT Codes' },
+            { key: 'HCPCS', cls: 'tag-hcpcs', label: 'HCPCS Codes' },
+            { key: 'Modifiers', cls: 'tag-modifier', label: 'Modifiers' },
+        ];
+
+        function renderCards(result) {
+            const cards = FIELD_CONFIG.map(({ key, cls, label }) => {
+                const items = result[key] || [];
+                const tags = items.length
+                    ? items.map((t, i) => `<span class="tag ${cls}" style="animation-delay:${i * 30}ms">${escHtml(t)}</span>`).join('')
+                    : `<span class="empty-list">— none detected —</span>`;
+                return `
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">${label}</span>
+          <span class="card-count">${items.length}</span>
+        </div>
+        <div class="card-body">
+          <div class="tag-cloud">${tags}</div>
+        </div>
+      </div>`;
+            }).join('');
+
+            document.getElementById('output-area').innerHTML = `<div class="result-cards">${cards}</div>`;
+        }
+
+        // ── JSON renderer ─────────────────────────────────────────────────────────────
+
+        function syntaxHighlight(json) {
+            return json
+                .replace(/("(?:[^"\\]|\\.)*")\s*:/g, '<span class="json-key">$1</span>:')
+                .replace(/:\s*("(?:[^"\\]|\\.)*")/g, ': <span class="json-str">$1</span>')
+                .replace(/:\s*(\d+\.?\d*)/g, ': <span class="json-num">$1</span>')
+                .replace(/:\s*(true|false)/g, ': <span class="json-bool">$1</span>')
+                .replace(/:\s*(null)/g, ': <span class="json-null">$1</span>');
+        }
+
+        function renderJSON(result) {
+            const raw = JSON.stringify(result, null, 2);
+            document.getElementById('output-area').innerHTML =
+                `<div class="json-view">${syntaxHighlight(escHtml(raw))}</div>`;
+        }
+
+        function renderResult(result) {
+            if (currentView === 'json') renderJSON(result);
+            else renderCards(result);
+        }
+
+        // ── Stats strip ───────────────────────────────────────────────────────────────
+
+        function updateStats(result) {
+            document.getElementById('st-terms').textContent = (result['Clinical Terms'] || []).length;
+            document.getElementById('st-locs').textContent = (result['Anatomical Locations'] || []).length;
+            document.getElementById('st-diag').textContent = (result['Diagnosis'] || []).length;
+            document.getElementById('st-icd').textContent = (result['ICD-10'] || []).length;
+            document.getElementById('st-cpt').textContent = (result['CPT'] || []).length;
+            document.getElementById('stats-strip').style.display = 'flex';
+        }
+
+        // ── Main extraction handler ───────────────────────────────────────────────────
+
+        function runExtraction() {
+            const text = document.getElementById('report-input').value.trim();
+            const reportId = document.getElementById('report-id').value.trim() || 'Report';
+
+            if (!text) {
+                document.getElementById('report-input').style.border = '2px solid #ef4444';
+                setTimeout(() => document.getElementById('report-input').style.border = '', 800);
+                return;
+            }
+
+            showProcessing();
+            document.getElementById('extract-btn').disabled = true;
+
+            // Small delay for UI feedback
+            setTimeout(() => {
+                try {
+                    const result = extractReport(text, reportId);
+                    currentResult = result;
+                    renderResult(result);
+                    updateStats(result);
+                    document.getElementById('copy-btn').style.display = '';
+                    document.getElementById('dl-btn').style.display = '';
+                } catch (err) {
+                    document.getElementById('output-area').innerHTML =
+                        `<div class="empty-state"><h3 style="color:#ef4444">Extraction error</h3><p>${escHtml(err.message)}</p></div>`;
+                } finally {
+                    document.getElementById('extract-btn').disabled = false;
+                }
+            }, 200);
+        }
+
+        // ── Utilities ─────────────────────────────────────────────────────────────────
+
+        function escHtml(s) {
+            return String(s)
+                .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+        }
+
+        function copyJSON() {
+            if (!currentResult) return;
+            navigator.clipboard.writeText(JSON.stringify(currentResult, null, 2))
+                .then(() => {
+                    const btn = document.getElementById('copy-btn');
+                    const orig = btn.textContent;
+                    btn.textContent = 'Copied ✓';
+                    setTimeout(() => btn.textContent = orig, 1500);
+                });
+        }
+
+        function downloadJSON() {
+            if (!currentResult) return;
+            const blob = new Blob([JSON.stringify(currentResult, null, 2)], { type: 'application/json' });
+            const a = document.createElement('a');
+            a.href = URL.createObjectURL(blob);
+            a.download = `${(currentResult.ReportID || 'report').replace(/\s+/g, '_').toLowerCase()}_extracted.json`;
+            a.click();
+        }
+
+        // ── Keyboard shortcut ─────────────────────────────────────────────────────────
+        document.addEventListener('keydown', e => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') runExtraction();
+        });
+    </script>
+</body>
+
+</html>
