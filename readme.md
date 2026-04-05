@@ -1,5 +1,9 @@
 # Clinical NLP Extractor 🏥
 
+## 🌐 Live Demo
+**➡️ [Access the Deployed Project Here](https://clinical-nlp-extraction.onrender.com)**
+
+
 Extract structured clinical information from endoscopy reports using **traditional NLP only** — no LLMs, no OpenAI, no GPT.
 
 ## Techniques Used
